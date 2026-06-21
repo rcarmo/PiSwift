@@ -33,6 +33,10 @@ let package = Package(
             targets: ["PiSwiftCodingAgentTui"]
         ),
         .library(
+            name: "PiSwiftShell",
+            targets: ["PiSwiftShell"]
+        ),
+        .library(
             name: "PiSwiftSyntaxHighlight",
             targets: ["PiSwiftSyntaxHighlight"]
         ),
@@ -53,10 +57,15 @@ let package = Package(
             name: "pi-coding-agent",
             targets: ["PiSwiftCodingAgentCLI"]
         ),
+        .executable(
+            name: "pi-shell",
+            targets: ["PiSwiftShellApp"]
+        ),
     ],
     dependencies: [
         .package(url: "https://github.com/MacPaw/OpenAI.git", branch: "main"),
         .package(url: "https://github.com/jamesrochabrun/SwiftAnthropic.git", branch: "main"),
+        .package(url: "https://github.com/apple/swift-markdown.git", from: "0.7.3"),
         .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.4.0"),
         .package(path: "../MiniTui"),
     ],
@@ -106,6 +115,16 @@ let package = Package(
             swiftSettings: strictConcurrencySettings
         ),
         .target(
+            name: "PiSwiftShell",
+            dependencies: [
+                "PiSwiftAI",
+                "PiSwiftAgent",
+                "PiSwiftCodingAgent",
+                .product(name: "Markdown", package: "swift-markdown"),
+            ],
+            swiftSettings: strictConcurrencySettings
+        ),
+        .target(
             name: "PiMCPAdapter",
             dependencies: [
                 "PiSwiftCodingAgent",
@@ -141,6 +160,13 @@ let package = Package(
                 "PiSwiftCodingAgent",
                 "PiSwiftCodingAgentTui",
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
+            ],
+            swiftSettings: strictConcurrencySettings
+        ),
+        .executableTarget(
+            name: "PiSwiftShellApp",
+            dependencies: [
+                "PiSwiftShell",
             ],
             swiftSettings: strictConcurrencySettings
         ),

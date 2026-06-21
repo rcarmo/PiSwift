@@ -2,6 +2,7 @@
 #
 # Common targets:
 #   make build         # release build of pi-coding-agent + the extension SDK
+#   make shell-app     # release build of the native Pi Shell.app
 #   make install       # install pi-coding-agent + extension SDK under PREFIX
 #   make uninstall     # remove an installation under PREFIX
 #   make run           # debug run via `swift run`
@@ -16,7 +17,7 @@ MODULES_SRC   := $(BUILD_DIR)/Modules
 DYLIB_SRC     := $(BUILD_DIR)/libPiExtensionSDK.dylib
 BIN_SRC       := $(BUILD_DIR)/pi-coding-agent
 
-.PHONY: run build install uninstall clean print-paths
+.PHONY: run build shell-app install uninstall clean print-paths
 
 run:
 	swift run pi-coding-agent
@@ -24,6 +25,9 @@ run:
 build:
 	swift build -c release --product pi-coding-agent
 	swift build -c release --product PiExtensionSDK
+
+shell-app:
+	scripts/build-shell-app.sh
 
 # Install layout (FHS-style):
 #   $(BIN_DIR)/pi-coding-agent
