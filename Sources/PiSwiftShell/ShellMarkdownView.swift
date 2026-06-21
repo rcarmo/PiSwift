@@ -5,18 +5,53 @@ struct ShellMarkdownView: View {
     var source: String
     var isStreaming: Bool
 
+    private var shouldUsePreview: Bool {
+        source.count > (isStreaming ? 12_000 : 45_000)
+    }
+
     private var blocks: [Markup] {
         let document = Document(parsing: preparedSource(source, isStreaming: isStreaming))
         return Array(document.children)
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
-                ShellMarkdownBlock(markup: block, listDepth: 0)
+        if shouldUsePreview {
+            LargeMarkdownPreview(source: source, isStreaming: isStreaming)
+        } else {
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
+                    ShellMarkdownBlock(markup: block, listDepth: 0)
+                }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct LargeMarkdownPreview: View {
+    var source: String
+    var isStreaming: Bool
+
+    private var preview: String {
+        if isStreaming {
+            return source.tail(maxCharacters: 12_000, prefix: "[Large response streaming - showing the latest text]\n\n")
+        }
+        return source.middleElidedPreview(head: 24_000, tail: 12_000)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(preview)
+                .font(.body)
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Text(isStreaming ? "Large response is still streaming. Full text will be available from copy." : "Large response preview. Use the row copy button for the full text.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(10)
+        .background(PiShellTheme.surface.opacity(0.65))
+        .clipShape(RoundedRectangle(cornerRadius: PiShellTheme.controlRadius, style: .continuous))
     }
 }
 
@@ -225,7 +260,8 @@ private struct ShellMarkdownTableView: View {
     private func cellView(_ cell: Markdown.Table.Cell?, column: Int, isHeader: Bool) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             if let cell {
-                ShellMarkdownInline(markup: cell)
+                Text(attributedTableCell(cell))
+                    .textSelection(.enabled)
                     .font(isHeader ? .body.weight(.semibold) : .body)
                     .frame(maxWidth: .infinity, alignment: alignment(for: column))
             }
@@ -300,6 +336,18 @@ private func attributedChildren(_ markup: Markup) -> AttributedString {
     }
 }
 
+private func attributedTableCell(_ cell: Markdown.Table.Cell) -> AttributedString {
+    let children = Array(cell.children)
+    guard !children.isEmpty else { return AttributedString() }
+    return children.reduce(into: AttributedString()) { result, child in
+        if let paragraph = child as? Paragraph {
+            result += attributedChildren(paragraph)
+        } else {
+            result += attributedInline(child)
+        }
+    }
+}
+
 private func styled(_ text: String, presentation: InlinePresentationIntent) -> AttributedString {
     var attributed = AttributedString(text)
     attributed.inlinePresentationIntent = presentation
@@ -339,4 +387,21 @@ private func closingUnterminatedFence(in source: String) -> String {
     }
     guard let openFence else { return source }
     return source + "\n" + openFence
+}
+
+private extension String {
+    func tail(maxCharacters: Int, prefix: String = "") -> String {
+        guard count > maxCharacters else { return self }
+        let start = index(endIndex, offsetBy: -maxCharacters)
+        return prefix + String(self[start...])
+    }
+
+    func middleElidedPreview(head: Int, tail: Int) -> String {
+        guard count > head + tail else { return self }
+        let headEnd = index(startIndex, offsetBy: head)
+        let tailStart = index(endIndex, offsetBy: -tail)
+        return String(self[..<headEnd])
+            + "\n\n[Large response shortened in the transcript. Use copy for the full text.]\n\n"
+            + String(self[tailStart...])
+    }
 }

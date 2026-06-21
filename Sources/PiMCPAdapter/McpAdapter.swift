@@ -27,7 +27,7 @@ final class McpExtensionState: Sendable {
 
 private let failureBackoffSeconds: TimeInterval = 60
 private let maxParallelConnections = 10
-private let builtinToolNames: Set<String> = ["read", "bash", "edit", "write", "grep", "find", "ls", "mcp", "subagent"]
+private let builtinToolNames: Set<String> = ["read", "bash", "edit", "write", "grep", "find", "ls", "actions", "mcp", "subagent"]
 
 // MARK: - Direct Tool Spec
 

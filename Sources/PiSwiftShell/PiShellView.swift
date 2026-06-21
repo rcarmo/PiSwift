@@ -205,6 +205,7 @@ private struct TranscriptView: View {
                     } else {
                         ForEach(viewModel.messages) { message in
                             MessageRow(message: message)
+                                .equatable()
                                 .id(message.id)
                         }
                     }
@@ -214,15 +215,11 @@ private struct TranscriptView: View {
             .background(PiShellTheme.panelFill)
             .onChange(of: viewModel.messages.last?.id) { _, id in
                 guard let id else { return }
-                withAnimation(.easeOut(duration: 0.2)) {
-                    proxy.scrollTo(id, anchor: .bottom)
-                }
+                proxy.scrollTo(id, anchor: .bottom)
             }
             .onChange(of: viewModel.messages.last?.text) { _, _ in
                 guard let id = viewModel.messages.last?.id else { return }
-                withAnimation(.easeOut(duration: 0.12)) {
-                    proxy.scrollTo(id, anchor: .bottom)
-                }
+                proxy.scrollTo(id, anchor: .bottom)
             }
         }
     }
@@ -240,7 +237,7 @@ private struct EmptyTranscriptView: View {
     }
 }
 
-private struct MessageRow: View {
+private struct MessageRow: View, Equatable {
     var message: PiShellMessage
     @State private var hovering = false
     private let userProfile = ShellUserProfile.current
@@ -258,6 +255,10 @@ private struct MessageRow: View {
         message.timestamp.formatted(date: .omitted, time: .shortened)
     }
 
+    nonisolated static func == (lhs: MessageRow, rhs: MessageRow) -> Bool {
+        lhs.message == rhs.message
+    }
+
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             avatar
@@ -271,9 +272,9 @@ private struct MessageRow: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     if message.isStreaming {
-                        ProgressView()
-                            .controlSize(.small)
-                            .scaleEffect(0.72)
+                        Image(systemName: "ellipsis")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
                             .frame(width: 14, height: 14)
                     }
                     Spacer(minLength: 8)
@@ -363,30 +364,38 @@ private struct MessageSegment: Identifiable {
         case image(String)
     }
 
-    var id = UUID()
+    var id: String
     var kind: Kind
     var content: String
     var raw: String
 
     static func build(from text: String, role: PiShellRole) -> [MessageSegment] {
         guard role == .assistant, !text.isEmpty else {
-            return [MessageSegment(kind: .text, content: text, raw: text)]
+            return [MessageSegment(id: "text-0", kind: .text, content: text, raw: text)]
+        }
+        guard text.contains("![") || text.contains("<img") || text.contains("<IMG") || text.contains("<svg") || text.contains("<SVG") || text.contains("```svg") else {
+            return [MessageSegment(id: "text-0", kind: .text, content: text, raw: text)]
+        }
+        guard text.count < 80_000 else {
+            return [MessageSegment(id: "text-0", kind: .text, content: text, raw: text)]
         }
 
         let pattern = #"```svg\s*\r?\n([\s\S]*?)```|<svg\b[\s\S]*?</svg>|<img\b[^>]*src\s*=\s*["']([^"']+)["'][^>]*>|!\[[^\]]*\]\(([^)]+)\)"#
         guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else {
-            return [MessageSegment(kind: .text, content: text, raw: text)]
+            return [MessageSegment(id: "text-0", kind: .text, content: text, raw: text)]
         }
 
         var segments: [MessageSegment] = []
         var last = text.startIndex
+        var index = 0
         let nsRange = NSRange(text.startIndex..., in: text)
         for match in regex.matches(in: text, options: [], range: nsRange) {
             guard let range = Range(match.range(at: 0), in: text) else { continue }
             if range.lowerBound > last {
                 let before = String(text[last..<range.lowerBound])
                 if !before.isEmpty {
-                    segments.append(MessageSegment(kind: .text, content: before, raw: before))
+                    segments.append(MessageSegment(id: "text-\(index)", kind: .text, content: before, raw: before))
+                    index += 1
                 }
             }
 
@@ -404,17 +413,18 @@ private struct MessageSegment: Identifiable {
                 source = ""
             }
             if !source.isEmpty {
-                segments.append(MessageSegment(kind: .image(source), content: source, raw: raw))
+                segments.append(MessageSegment(id: "image-\(index)", kind: .image(source), content: source, raw: raw))
+                index += 1
             }
             last = range.upperBound
         }
         if last < text.endIndex {
             let tail = String(text[last...])
             if !tail.isEmpty {
-                segments.append(MessageSegment(kind: .text, content: tail, raw: tail))
+                segments.append(MessageSegment(id: "text-\(index)", kind: .text, content: tail, raw: tail))
             }
         }
-        return segments.isEmpty ? [MessageSegment(kind: .text, content: text, raw: text)] : segments
+        return segments.isEmpty ? [MessageSegment(id: "text-0", kind: .text, content: text, raw: text)] : segments
     }
 
     private static func svgDataURI(_ svg: String) -> String {
@@ -837,8 +847,8 @@ private struct ComposerView: View {
                 }
             } label: {
                 Image(systemName: isStopMode ? "stop.fill" : "arrow.up")
-                    .font(.system(size: 18, weight: .semibold))
-                    .frame(width: 34, height: 34)
+                    .font(.system(size: 15, weight: .semibold))
+                    .frame(width: 30, height: 30)
             }
             .buttonStyle(.plain)
             .foregroundStyle(.primary)
@@ -846,6 +856,11 @@ private struct ComposerView: View {
                 Circle()
                     .fill(PiShellTheme.surface)
             }
+            .overlay {
+                Circle()
+                    .stroke(PiShellTheme.separator.opacity(0.75), lineWidth: 1)
+            }
+            .contentShape(Circle())
             .keyboardShortcut(.return, modifiers: [.command])
             .help(viewModel.isGenerating ? "Stop or steer" : "Send")
         }

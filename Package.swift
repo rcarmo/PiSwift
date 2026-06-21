@@ -168,7 +168,10 @@ let package = Package(
             dependencies: [
                 "PiSwiftShell",
             ],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: strictConcurrencySettings,
+            linkerSettings: [
+                .linkedFramework("AppIntents"),
+            ]
         ),
         .testTarget(
             name: "PiSwiftAITests",

@@ -16,6 +16,10 @@ public final class AgentSessionShellBackend: PiShellBackend, @unchecked Sendable
     private var settings = PiShellSettings()
     private var activeAssistantMessageId: String?
     private var activeAssistantText = ""
+    private var activeAssistantLastEmit = Date.distantPast
+    private var activeAssistantLastEmitCount = 0
+    private let streamingEmitInterval: TimeInterval = 0.12
+    private let streamingEmitCharacterStride = 1_500
 
     public init() {}
 
@@ -228,16 +232,20 @@ public final class AgentSessionShellBackend: PiShellBackend, @unchecked Sendable
             if case .assistant(let assistant) = message {
                 activeAssistantMessageId = assistantId(assistant)
                 activeAssistantText = text(from: assistant.content)
+                activeAssistantLastEmit = Date()
+                activeAssistantLastEmitCount = activeAssistantText.count
             }
             onEvent?(.messageStarted(shellMessage(from: message, streaming: message.role == "assistant")))
         case .messageUpdate(let message, let assistantEvent):
             switch assistantEvent {
             case .textDelta(_, let delta, let partial):
                 activeAssistantText += delta
-                onEvent?(.messageUpdated(shellMessage(from: partial, text: activeAssistantText, streaming: true)))
+                emitStreamingAssistantUpdateIfNeeded(partial)
                 return
             case .textEnd(_, _, let partial):
                 activeAssistantText = text(from: partial.content)
+                activeAssistantLastEmit = Date()
+                activeAssistantLastEmitCount = activeAssistantText.count
                 onEvent?(.messageUpdated(shellMessage(from: partial, text: activeAssistantText, streaming: true)))
                 return
             case .thinkingDelta(_, let delta, _):
@@ -251,6 +259,8 @@ public final class AgentSessionShellBackend: PiShellBackend, @unchecked Sendable
             if case .assistant = message {
                 activeAssistantMessageId = nil
                 activeAssistantText = ""
+                activeAssistantLastEmit = .distantPast
+                activeAssistantLastEmitCount = 0
             }
         case .toolExecutionStart(let toolCallId, let toolName, _):
             onEvent?(.tool(PiShellToolEvent(id: toolCallId, toolName: toolName, status: "running", summary: "")))
@@ -264,6 +274,18 @@ public final class AgentSessionShellBackend: PiShellBackend, @unchecked Sendable
         case .turnStart, .turnEnd:
             break
         }
+    }
+
+    private func emitStreamingAssistantUpdateIfNeeded(_ partial: AssistantMessage) {
+        let now = Date()
+        let countDelta = activeAssistantText.count - activeAssistantLastEmitCount
+        guard now.timeIntervalSince(activeAssistantLastEmit) >= streamingEmitInterval ||
+              countDelta >= streamingEmitCharacterStride else {
+            return
+        }
+        activeAssistantLastEmit = now
+        activeAssistantLastEmitCount = activeAssistantText.count
+        onEvent?(.messageUpdated(shellMessage(from: partial, text: activeAssistantText, streaming: true)))
     }
 
     private func shellMessage(from message: AgentMessage, streaming: Bool) -> PiShellMessage {

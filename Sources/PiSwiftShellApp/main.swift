@@ -4,7 +4,6 @@ import PiSwiftShell
 import AppKit
 #endif
 
-@main
 struct PiSwiftShellApplication: App {
     @StateObject private var viewModel = PiShellViewModel()
 
@@ -52,6 +51,8 @@ struct PiSwiftShellApplication: App {
         #endif
     }
 }
+
+PiSwiftShellApplication.main()
 
 #if os(macOS)
 private struct PiShellStatusMenu: View {

@@ -9,6 +9,7 @@ public enum PiShellRole: String, Sendable, Codable {
 
 public enum PiShellToolsMode: String, CaseIterable, Identifiable, Sendable, Codable {
     case none
+    case actions
     case readOnly
     case full
 
@@ -17,6 +18,7 @@ public enum PiShellToolsMode: String, CaseIterable, Identifiable, Sendable, Coda
     var label: String {
         switch self {
         case .none: "None"
+        case .actions: "Actions"
         case .readOnly: "Read-only"
         case .full: "Full"
         }
@@ -35,7 +37,7 @@ public struct PiShellSettings: Sendable, Equatable, Codable {
     public init(
         model: String = "",
         thinkingLevel: String = "medium",
-        toolsMode: PiShellToolsMode = .none,
+        toolsMode: PiShellToolsMode = .actions,
         persistentSession: Bool = false,
         sessionName: String = "Pi Assistant",
         scale: Double = 1,

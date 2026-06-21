@@ -2,7 +2,7 @@ import Foundation
 import SwiftUI
 
 @MainActor
-public final class PiShellViewModel: ObservableObject {
+public final class PiShellViewModel: NSObject, ObservableObject {
     @Published public private(set) var messages: [PiShellMessage] = []
     @Published public private(set) var toolEvents: [PiShellToolEvent] = []
     @Published public private(set) var currentThinking = ""
@@ -27,12 +27,19 @@ public final class PiShellViewModel: ObservableObject {
     private static let settingsKey = "PiSwiftShell.settings.v1"
 
     public init(backend: PiShellBackend = AgentSessionShellBackend()) {
+        let loadedSettings = Self.loadSettings()
         self.backend = backend
-        self.settings = Self.loadSettings()
-        self.thinkingLevel = settings.thinkingLevel
+        self.settings = loadedSettings
+        self.thinkingLevel = loadedSettings.thinkingLevel
+        super.init()
         self.backend.onEvent = { [weak self] event in
             self?.handle(event)
         }
+        installIntentBridge()
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
 
     public var modelStatusLine: String {
@@ -66,6 +73,14 @@ public final class PiShellViewModel: ObservableObject {
         Task {
             await backend.send(text, behavior: resolvedBehavior, attachments: pendingAttachments)
         }
+    }
+
+    public func askFromIntent(_ prompt: String) {
+        let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        start()
+        draft = trimmed
+        sendDraft(behavior: .prompt)
     }
 
     public func addAttachments(_ urls: [URL]) {
@@ -259,6 +274,31 @@ public final class PiShellViewModel: ObservableObject {
         }
     }
 
+    private func installIntentBridge() {
+        let center = NotificationCenter.default
+        center.addObserver(
+            self,
+            selector: #selector(handleAskIntentNotification(_:)),
+            name: PiShellIntentBridge.askNotification,
+            object: nil
+        )
+        center.addObserver(
+            self,
+            selector: #selector(handleNewSessionIntentNotification(_:)),
+            name: PiShellIntentBridge.newSessionNotification,
+            object: nil
+        )
+    }
+
+    @objc private func handleAskIntentNotification(_ notification: Notification) {
+        let prompt = notification.userInfo?[PiShellIntentBridge.promptUserInfoKey] as? String ?? ""
+        askFromIntent(prompt)
+    }
+
+    @objc private func handleNewSessionIntentNotification(_ notification: Notification) {
+        clearVisibleHistory()
+    }
+
     private func upsert(_ message: PiShellMessage) {
         if let index = messages.firstIndex(where: { $0.id == message.id }) {
             messages[index] = message
@@ -376,8 +416,11 @@ public final class PiShellViewModel: ObservableObject {
 
     private static func loadSettings() -> PiShellSettings {
         guard let data = UserDefaults.standard.data(forKey: settingsKey),
-              let decoded = try? JSONDecoder().decode(PiShellSettings.self, from: data) else {
+              var decoded = try? JSONDecoder().decode(PiShellSettings.self, from: data) else {
             return PiShellSettings()
+        }
+        if decoded.toolsMode == .none {
+            decoded.toolsMode = .actions
         }
         return decoded
     }

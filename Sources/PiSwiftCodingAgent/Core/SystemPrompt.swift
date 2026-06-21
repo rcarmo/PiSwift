@@ -28,6 +28,7 @@ private let toolDescriptions: [ToolName: String] = [
     .grep: "Search file contents for patterns (respects .gitignore)",
     .find: "Find files by glob pattern (respects .gitignore)",
     .ls: "List directory contents",
+    .actions: "Discover app automation metadata and run user Shortcuts; AppIntent identifiers are not directly invokable",
     .subagent: "Delegate tasks to specialized subagents with isolated context",
 ]
 
@@ -199,6 +200,7 @@ public func buildSystemPrompt(_ options: BuildSystemPromptOptions = BuildSystemP
     let hasFind = tools.contains(.find)
     let hasLs = tools.contains(.ls)
     let hasRead = tools.contains(.read)
+    let hasActions = tools.contains(.actions)
 
     if !hasBash && !hasEdit && !hasWrite {
         guidelinesList.append("You are in READ-ONLY mode - you cannot modify files or execute arbitrary commands")
@@ -228,6 +230,11 @@ public func buildSystemPrompt(_ options: BuildSystemPromptOptions = BuildSystemP
 
     if hasEdit || hasWrite {
         guidelinesList.append("When summarizing your actions, output plain text directly - do NOT use cat or bash to display what you did")
+    }
+
+    if hasActions {
+        guidelinesList.append("The actions tool can discover App Intents metadata, but it cannot invoke third-party AppIntent identifiers directly. To trigger app automation, list and run an existing user Shortcut that wraps the desired app action.")
+        guidelinesList.append("When using the actions tool, summarize only the relevant apps, windows, files, shortcuts, or actions. Do not paste the full raw JSON/tool output into chat.")
     }
 
     guidelinesList.append("Be concise in your responses")

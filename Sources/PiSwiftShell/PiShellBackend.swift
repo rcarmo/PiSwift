@@ -43,7 +43,7 @@ public extension PiShellToolsMode {
     var noToolsMode: NoToolsMode? {
         switch self {
         case .none: .all
-        case .readOnly, .full: nil
+        case .actions, .readOnly, .full: nil
         }
     }
 
@@ -51,10 +51,12 @@ public extension PiShellToolsMode {
         switch self {
         case .none:
             nil
+        case .actions:
+            ["actions"]
         case .readOnly:
             ["read", "grep", "find", "ls"]
         case .full:
-            ["read", "bash", "edit", "write", "grep", "find", "ls"]
+            ["read", "bash", "edit", "write", "grep", "find", "ls", "actions"]
         }
     }
 }

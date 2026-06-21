@@ -11,6 +11,7 @@ public enum ToolName: String, CaseIterable, Sendable {
     case grep
     case find
     case ls
+    case actions
     case subagent
 }
 
@@ -46,6 +47,7 @@ public func createCodingTools(cwd: String, options: ToolsOptions?, subagentConte
     tools.append(contentsOf: [
         createEditTool(cwd: cwd),
         createWriteTool(cwd: cwd),
+        createActionsTool(cwd: cwd),
     ])
     if let subagentContext {
         tools.append(createSubagentTool(subagentContext))
@@ -75,6 +77,7 @@ public func createAllTools(cwd: String, options: ToolsOptions?, subagentContext:
         .grep: createGrepTool(cwd: cwd),
         .find: createFindTool(cwd: cwd),
         .ls: createLsTool(cwd: cwd),
+        .actions: createActionsTool(cwd: cwd),
     ]
     if shouldIncludeBashTool() {
         tools[.bash] = createBashTool(cwd: cwd)

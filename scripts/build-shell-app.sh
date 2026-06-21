@@ -59,4 +59,115 @@ cat > "$CONTENTS/Info.plist" <<'PLIST'
 </plist>
 PLIST
 
+INTENTS_DIR="$RESOURCES/Metadata.appintents"
+mkdir -p "$INTENTS_DIR"
+cat > "$INTENTS_DIR/version.json" <<'JSON'
+{
+  "version" : "3.0",
+  "toolsVersion" : "manual"
+}
+JSON
+cat > "$INTENTS_DIR/extract.actionsdata" <<'JSON'
+{
+  "actions": {
+    "AskPiShellIntent": {
+      "identifier": "AskPiShellIntent",
+      "fullyQualifiedTypeName": "PiSwiftShellApp.AskPiShellIntent",
+      "title": { "key": "Ask Pi Shell" },
+      "descriptionMetadata": {
+        "descriptionText": { "key": "Send a prompt to the current Pi Shell agent session." },
+        "searchKeywords": []
+      },
+      "isDiscoverable": true,
+      "openAppWhenRun": true,
+      "parameters": [
+        {
+          "name": "prompt",
+          "title": { "key": "Prompt" },
+          "isOptional": false,
+          "isInput": true,
+          "valueType": { "primitive": { "wrapper": { "typeIdentifier": 0 } } }
+        },
+        {
+          "name": "session",
+          "title": { "key": "Session" },
+          "isOptional": false,
+          "isInput": false,
+          "valueType": { "entity": { "wrapper": { "typeName": "PiShellSessionEntity" } } }
+        }
+      ],
+      "actionConfiguration": {
+        "actionSummary": {
+          "wrapper": {
+            "summaryString": {
+              "formatString": "Ask Pi Shell ${prompt}",
+              "parameterIdentifiers": ["prompt"]
+            },
+            "otherParameterIdentifiers": ["session"]
+          }
+        }
+      },
+      "visibilityMetadata": { "isDiscoverable": true, "assistantOnly": false }
+    },
+    "NewPiShellSessionIntent": {
+      "identifier": "NewPiShellSessionIntent",
+      "fullyQualifiedTypeName": "PiSwiftShellApp.NewPiShellSessionIntent",
+      "title": { "key": "Start New Pi Shell Session" },
+      "descriptionMetadata": {
+        "descriptionText": { "key": "Clear the visible chat and start a fresh Pi Shell agent session." },
+        "searchKeywords": []
+      },
+      "isDiscoverable": true,
+      "openAppWhenRun": true,
+      "parameters": [],
+      "actionConfiguration": {
+        "actionSummary": {
+          "wrapper": {
+            "summaryString": {
+              "formatString": "Start a new Pi Shell session",
+              "parameterIdentifiers": []
+            },
+            "otherParameterIdentifiers": []
+          }
+        }
+      },
+      "visibilityMetadata": { "isDiscoverable": true, "assistantOnly": false }
+    },
+    "OpenPiShellIntent": {
+      "identifier": "OpenPiShellIntent",
+      "fullyQualifiedTypeName": "PiSwiftShellApp.OpenPiShellIntent",
+      "title": { "key": "Open Pi Shell" },
+      "descriptionMetadata": {
+        "descriptionText": { "key": "Open Pi Shell." },
+        "searchKeywords": []
+      },
+      "isDiscoverable": true,
+      "openAppWhenRun": true,
+      "parameters": [],
+      "actionConfiguration": {
+        "actionSummary": {
+          "wrapper": {
+            "summaryString": {
+              "formatString": "Open Pi Shell",
+              "parameterIdentifiers": []
+            },
+            "otherParameterIdentifiers": []
+          }
+        }
+      },
+      "visibilityMetadata": { "isDiscoverable": true, "assistantOnly": false }
+    }
+  },
+  "entities": {
+    "PiShellSessionEntity": {
+      "identifier": "PiShellSessionEntity",
+      "displayRepresentation": { "title": { "key": "Pi Shell Session" } },
+      "properties": []
+    }
+  },
+  "queries": {},
+  "enums": {}
+}
+JSON
+
 echo "Built $APP_DIR"

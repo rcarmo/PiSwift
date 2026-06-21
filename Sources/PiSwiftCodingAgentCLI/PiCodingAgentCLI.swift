@@ -311,7 +311,7 @@ struct PiCodingAgentCLI: AsyncParsableCommand {
         //   --no-tools         → disable everything (no built-ins, no extension/custom tools)
         //   --no-builtin-tools → keep extension/custom tools, disable only the default built-in set
         //   --tools <names>    → explicit allowlist (overrides above defaults)
-        //   (default)          → enable read/bash/edit/write built-ins
+        //   (default)          → enable read/bash/edit/write/actions built-ins
         let excludedToolNames = Set(parsed.excludeTools ?? [])
         let selectedToolNames: [ToolName]
         if parsed.noTools == true {
@@ -320,7 +320,7 @@ struct PiCodingAgentCLI: AsyncParsableCommand {
             // Keep only explicitly-named tools (extension / custom tools added separately below).
             selectedToolNames = parsed.tools ?? []
         } else {
-            selectedToolNames = parsed.tools ?? [.read, .bash, .edit, .write]
+            selectedToolNames = parsed.tools ?? [.read, .bash, .edit, .write, .actions]
         }
         let filteredSelectedToolNames = selectedToolNames.filter { !excludedToolNames.contains($0.rawValue) }
         let baseHookPaths = parsed.noExtensions == true ? [] : settingsManager.getHooks()
